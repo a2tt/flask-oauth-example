@@ -9,14 +9,19 @@ from oauth_config import oauth_config
 app = Flask(__name__)
 
 
+@app.route('/')
 @app.route('/login')
 def login():
     return f'''
-    <h1><a href="{url_for('.oauth_login', provider='google')}">구글</a></h1>
-    <h1><a href="{url_for('.oauth_login', provider='facebook')}">페이스북</a></h1>
-    <h1><a href="{url_for('.oauth_login', provider='naver')}">네이버</a></h1>
-    <h1><a href="{url_for('.oauth_login', provider='kakao')}">카카오</a></h1>
-    <h1><a href="{url_for('.oauth_login', provider='twitch')}">트위치</a></h1>
+    <h1>OAuth</h1>
+    <h2><a href="{url_for('.oauth_login', provider='google')}">Google</a></h2>
+    <h2><a href="{url_for('.oauth_login', provider='facebook')}">Facebook</a></h2>
+    <h2><a href="{url_for('.oauth_login', provider='naver')}">Naver</a></h2>
+    <h2><a href="{url_for('.oauth_login', provider='kakao')}">Kakao</a></h2>
+    <h2><a href="{url_for('.oauth_login', provider='twitch')}">Twitch</a></h2>
+    
+    <h1>OIDC</h1>
+    <h2><a href="{url_for('.oidc_login', provider='twitch')}">Twitch</a></h2>
     '''
 
 
@@ -65,6 +70,34 @@ def oauth_me(provider):
         return jsonify(me_resp)
     except KeyError:
         abort(404)
+
+
+@app.route('/login/oidc/<provider>')
+def oidc_login(provider):
+    try:
+        auth_uri = oauth_config[provider]['auth_uri']
+        params = {
+            # 'response_type': 'token+id_token',
+            'response_type': 'token',
+            'client_id': oauth_config[provider]['token_params']['client_id'],
+            'redirect_uri': url_for('oidc_login_callback', provider=provider, _external=True),
+            'scope': '+'.join(['openid'])
+        }
+
+        login_url = auth_uri + '?' + '&'.join([f'{k}={v}' for k, v in params.items()])
+        return redirect(login_url)
+    except KeyError:
+        abort(404)
+
+
+@app.route('/login/oidc/<provider>/callback')
+def oidc_login_callback(provider):
+    print(request.url)
+    print(request.pragma)
+    print(request.full_path)
+    print(request.path)
+
+    return str(request.url)
 
 
 if __name__ == '__main__':
